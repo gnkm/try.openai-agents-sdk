@@ -8,5 +8,6 @@ dependencies = [
     "dspy>=3.0.4",
     "openai-agents[litellm]>=0.6.1",
     "pydantic>=2.12.4",
+    "rich>=13.0.0",
     "typer>=0.20.0",
 ]
