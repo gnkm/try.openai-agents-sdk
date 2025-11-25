@@ -1,0 +1,35 @@
+{
+    "mcpServers": {
+        "codex": {
+            "type": "stdio",
+            "command": "codex",
+            "args": [
+                "mcp"
+            ]
+        },
+        "context7": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@upstash/context7-mcp"
+            ]
+        },
+        "serena": {
+            "command": "uvx",
+            "args": [
+                "--from",
+                "git+https://github.com/oraios/serena",
+                "serena",
+                "start-mcp-server"
+            ]
+        },
+        "vibe_kanban": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "vibe-kanban@latest",
+                "--mcp"
+            ]
+        }
+    }
+}
