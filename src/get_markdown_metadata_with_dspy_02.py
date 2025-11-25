@@ -76,8 +76,10 @@ from typing import Union
 import dspy
 import typer
 from pydantic import BaseModel, Field
+from rich.console import Console
 
 app = typer.Typer()
+console = Console()
 
 
 class Content(BaseModel):
@@ -225,6 +227,7 @@ def main(
         model=llm,
         api_key=api_key,
         temperature=0.7,
+        cache=False,  # キャッシュを無効化
     )
     dspy.configure(lm=lm)
 
@@ -233,7 +236,9 @@ def main(
 
     # マークダウンを生成
     try:
-        result = generator(prompt=prompt)
+        with console.status("[bold green]LLM 回答中...", spinner="dots") as status:
+            result = generator(prompt=prompt)
+            status.update("[bold green]生成完了！")
 
         # JSON文字列をパースしてバリデーション
         markdown_json_str = result.markdown_json.strip()
