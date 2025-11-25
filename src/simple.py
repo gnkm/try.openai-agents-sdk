@@ -4,6 +4,7 @@ Example:
     uv run python src/simple.py --llm 'openrouter/openai/gpt-oss-120b' --prompt '9.11 と 9.9 はどちらが大きい？'
 """
 
+import asyncio
 import os
 
 import typer
@@ -14,13 +15,18 @@ app = typer.Typer()
 
 
 @app.command()
-async def main(
+def main(
     llm: str = typer.Option(
         ..., help="LLM モデル名（例: openrouter/openai/gpt-oss-120b）"
     ),
     prompt: str = typer.Option(..., help="送信するプロンプト"),
 ) -> None:
     """LLM にプロンプトを送信してレスポンスを取得します。"""
+    asyncio.run(run_async(llm, prompt))
+
+
+async def run_async(llm: str, prompt: str) -> None:
+    """非同期でエージェントを実行します。"""
     # OpenRouter の API キーを環境変数から取得
     api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
