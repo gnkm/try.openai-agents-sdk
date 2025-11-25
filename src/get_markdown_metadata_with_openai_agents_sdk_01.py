@@ -77,8 +77,10 @@ import typer
 from agents import Agent, Runner
 from agents.extensions.models.litellm_model import LitellmModel
 from pydantic import BaseModel, Field
+from rich.console import Console
 
 app = typer.Typer()
+console = Console()
 
 
 class Content(BaseModel):
@@ -195,7 +197,9 @@ async def run_async(llm: str, prompt: str) -> None:
     )
 
     # エージェントを実行
-    result = await Runner.run(agent, prompt)
+    with console.status("[bold green]LLM 回答中...", spinner="dots") as status:
+        result = await Runner.run(agent, prompt)
+        status.update("[bold green]生成完了！")
 
     # 構造化された出力を取得
     document = result.final_output_as(MarkdownDocument)
