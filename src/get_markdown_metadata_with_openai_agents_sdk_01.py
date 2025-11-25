@@ -63,7 +63,7 @@
 ```
 
 Example:
-    uv run python src/get_markdown_with_openai_agents_sdk_01.py --prompt '1000 文字程度の記事を書いてください。テーマは、生成 AI です。' --llm 'openrouter/openai/gpt-oss-120b'
+    uv run python src/get_markdown_metadata_with_openai_agents_sdk_01.py --prompt '1000 文字程度の記事を書いてください。テーマは、生成 AI です。' --llm 'openrouter/openai/gpt-oss-120b'
 
 """
 
