@@ -1,7 +1,7 @@
 """LLM 名をプロンプトを受け取ってレスポンスを出力する。
 
 Example:
-    uv run python src/simple.py --llm 'openrouter/anthropic/claude-opus-4.5' --prompt '9.11 と 9.9 はどちらが大きい？'
+    uv run python src/simple.py --llm 'openrouter/openai/gpt-oss-120b' --prompt '9.11 と 9.9 はどちらが大きい？'
 """
 
 import os
@@ -16,7 +16,7 @@ app = typer.Typer()
 @app.command()
 async def main(
     llm: str = typer.Option(
-        ..., help="LLM モデル名（例: openrouter/anthropic/claude-opus-4.5）"
+        ..., help="LLM モデル名（例: openrouter/openai/gpt-oss-120b）"
     ),
     prompt: str = typer.Option(..., help="送信するプロンプト"),
 ) -> None:
