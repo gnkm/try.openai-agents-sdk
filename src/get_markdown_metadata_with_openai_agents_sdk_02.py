@@ -63,7 +63,7 @@
 ```
 
 Example:
-    uv run python src/get_markdown_with_openai_agents_sdk_01.py --prompt '1000 文字程度の記事を書いてください。テーマは、生成 AI です。' --llm 'openrouter/openai/gpt-oss-120b'
+    uv run python src/get_markdown_metadata_with_openai_agents_sdk_02.py --prompt '1000 文字程度の記事を書いてください。テーマは、生成 AI です。' --llm 'openrouter/openai/gpt-oss-120b'
 
 """
 
@@ -185,10 +185,31 @@ async def run_async(llm: str, prompt: str) -> None:
     agent = Agent(
         name="Markdown Generator",
         instructions=(
-            "ユーザーの要求に基づいて、構造化されたマークダウン文書を生成してください。"
-            "文書は見出し（Heading）と本文（Content）で構成され、見出しは階層構造を持つことができます。"
-            "見出しのレベル（1-6）を適切に設定し、各セクションに適切な本文を配置してください。"
-            "見出しには子要素として、さらに下位の見出しや本文を含めることができます。"
+            """
+ユーザーの要求に基づいて、構造化されたマークダウン文書を生成します。
+
+    文書は見出し（Heading）と本文（Content）で構成され、見出しは階層構造を持つことができます。
+    見出しのレベル（1-6）を適切に設定し、各セクションに適切な本文を配置してください。
+    見出しには子要素として、さらに下位の見出しや本文を含めることができます。
+
+    出力は必ず JSON 形式で、以下の構造に従ってください：
+    {
+        "contents": [
+            {
+                "level": 2,
+                "text": "見出しテキスト",
+                "children": [
+                    {"content": "本文テキスト"},
+                    {
+                        "level": 3,
+                        "text": "サブ見出し",
+                        "children": [{"content": "サブセクションの本文"}]
+                    }
+                ]
+            }
+        ]
+    }
+            """
         ),
         model=LitellmModel(model=llm, api_key=api_key),
         output_type=MarkdownDocument,

@@ -1,4 +1,5 @@
-"""構造化したマークダウンデータを生成する。
+"""
+構造化したマークダウンデータを生成する。
 
 マークダウンの[コンテンツ]に対して、[構造]を返す。
 
@@ -63,19 +64,17 @@
 ```
 
 Example:
-    uv run python src/get_markdown_with_openai_agents_sdk_01.py --prompt '1000 文字程度の記事を書いてください。テーマは、生成 AI です。' --llm 'openrouter/openai/gpt-oss-120b'
-
+    uv run python src/get_markdown_metadata_with_dspy_01.py --prompt '1000 文字程度の記事を書いてください。テーマは、生成 AI です。' --llm 'openrouter/openai/gpt-oss-120b'
 """
 
 from __future__ import annotations
 
-import asyncio
+import json
 import os
 from typing import Union
 
+import dspy
 import typer
-from agents import Agent, Runner
-from agents.extensions.models.litellm_model import LitellmModel
 from pydantic import BaseModel, Field
 
 app = typer.Typer()
@@ -161,6 +160,33 @@ class MarkdownDocument(BaseModel):
     )
 
 
+class GenerateMarkdown(dspy.Signature):
+    """ユーザーの要求に基づいて、構造化されたマークダウン文書を生成してください。
+
+    文書は見出し（Heading）と本文（Content）で構成され、見出しは階層構造を持つことができます。
+    見出しのレベル（1-6）を適切に設定し、各セクションに適切な本文を配置してください。
+    見出しには子要素として、さらに下位の見出しや本文を含めることができます。
+    """
+
+    prompt: str = dspy.InputField(desc="マークダウン文書を生成するためのプロンプト")
+    markdown_json: str = dspy.OutputField(
+        desc="構造化されたマークダウン文書のJSON形式の文字列"
+    )
+
+
+class MarkdownGenerator(dspy.Module):
+    """構造化されたマークダウン文書を生成するモジュール"""
+
+    def __init__(self):
+        super().__init__()
+        self.generate = dspy.ChainOfThought(GenerateMarkdown)
+
+    def forward(self, prompt: str) -> dspy.Prediction:
+        """プロンプトから構造化されたマークダウン文書を生成します。"""
+        prediction = self.generate(prompt=prompt)
+        return prediction
+
+
 @app.command()
 def main(
     prompt: str = typer.Option(..., help="マークダウン文書を生成するためのプロンプト"),
@@ -169,40 +195,58 @@ def main(
         help="LLM モデル名（例: openrouter/openai/gpt-oss-120b）",
     ),
 ) -> None:
-    """構造化されたマークダウン文書を生成します。"""
-    asyncio.run(run_async(llm, prompt))
-
-
-async def run_async(llm: str, prompt: str) -> None:
-    """非同期でエージェントを実行します。"""
+    """構造化されたマークダウン文書を生成します（DSPy版）。"""
     # OpenRouter の API キーを環境変数から取得
     api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
         typer.echo("エラー: OPENROUTER_API_KEY 環境変数が設定されていません", err=True)
         raise typer.Exit(1)
 
-    # LiteLLM モデルを使用してエージェントを作成
-    agent = Agent(
-        name="Markdown Generator",
-        instructions=(
-            "ユーザーの要求に基づいて、構造化されたマークダウン文書を生成してください。"
-            "文書は見出し（Heading）と本文（Content）で構成され、見出しは階層構造を持つことができます。"
-            "見出しのレベル（1-6）を適切に設定し、各セクションに適切な本文を配置してください。"
-            "見出しには子要素として、さらに下位の見出しや本文を含めることができます。"
-        ),
-        model=LitellmModel(model=llm, api_key=api_key),
-        output_type=MarkdownDocument,
+    # DSPy の LiteLLM モデルを設定
+    lm = dspy.LM(
+        model=llm,
+        api_key=api_key,
+        temperature=0.7,
     )
+    dspy.configure(lm=lm)
 
-    # エージェントを実行
-    result = await Runner.run(agent, prompt)
+    # マークダウン生成モジュールを作成
+    generator = MarkdownGenerator()
 
-    # 構造化された出力を取得
-    document = result.final_output_as(MarkdownDocument)
+    # マークダウンを生成
+    try:
+        result = generator(prompt=prompt)
 
-    # JSON 形式で出力（見出しのレベルなどのメタデータを含む）
-    output = document.model_dump_json(indent=2, ensure_ascii=False)
-    typer.echo(output)
+        # JSON文字列をパースしてバリデーション
+        markdown_json_str = result.markdown_json.strip()
+
+        # コードブロックで囲まれている場合は取り除く
+        if markdown_json_str.startswith("```"):
+            lines = markdown_json_str.split("\n")
+            # 最初と最後の```行を除去
+            markdown_json_str = "\n".join(
+                line
+                for i, line in enumerate(lines)
+                if not line.strip().startswith("```")
+            )
+
+        # JSONとしてパース
+        markdown_dict = json.loads(markdown_json_str)
+
+        # Pydantic モデルでバリデーション
+        document = MarkdownDocument(**markdown_dict)
+
+        # JSON 形式で出力
+        output = document.model_dump_json(indent=2, ensure_ascii=False)
+        typer.echo(output)
+
+    except json.JSONDecodeError as e:
+        typer.echo(f"エラー: JSON のパースに失敗しました: {e}", err=True)
+        typer.echo(f"生成された出力:\n{result.markdown_json}", err=True)
+        raise typer.Exit(1)
+    except Exception as e:
+        typer.echo(f"エラー: {e}", err=True)
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":
