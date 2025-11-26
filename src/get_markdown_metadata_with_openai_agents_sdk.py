@@ -97,6 +97,12 @@ def main(
     ),
 ) -> None:
     """構造化されたマークダウン文書を生成します（OpenAI Agents SDK版）。"""
+    # OpenRouter の API キーを環境変数から取得（早期検証）
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        typer.echo("エラー: OPENROUTER_API_KEY 環境変数が設定されていません", err=True)
+        raise typer.Exit(1)
+
     with open(prompts, "rb") as f:
         prompts_data = tomllib.load(f)
     system_prompt = prompts_data["prompt"]["system"]
@@ -106,19 +112,13 @@ def main(
         config_data = tomllib.load(f)
     temperature = config_data["temperature"]
 
-    asyncio.run(run_async(llm, system_prompt, user_prompt, temperature))
+    asyncio.run(run_async(llm, system_prompt, user_prompt, temperature, api_key))
 
 
 async def run_async(
-    llm: str, system_prompt: str, user_prompt: str, temperature: float
+    llm: str, system_prompt: str, user_prompt: str, temperature: float, api_key: str
 ) -> None:
     """非同期でエージェントを実行します。"""
-    # OpenRouter の API キーを環境変数から取得
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    if not api_key:
-        typer.echo("エラー: OPENROUTER_API_KEY 環境変数が設定されていません", err=True)
-        raise typer.Exit(1)
-
     # LiteLLM モデルを使用してエージェントを作成
     agent = Agent(
         name="Markdown Generator",

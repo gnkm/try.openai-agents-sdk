@@ -116,23 +116,23 @@ def main(
     ),
 ) -> None:
     """構造化されたマークダウン文書を生成します（DSPy版）。"""
+    # OpenRouter の API キーを環境変数から取得（早期検証）
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        typer.echo("エラー: OPENROUTER_API_KEY 環境変数が設定されていません", err=True)
+        raise typer.Exit(1)
+
     with open(prompts, "rb") as f:
-        prompts = tomllib.load(f)
-    system_prompt = prompts["prompt"]["system"]
-    user_prompt = prompts["prompt"]["user"]
+        prompts_data = tomllib.load(f)
+    system_prompt = prompts_data["prompt"]["system"]
+    user_prompt = prompts_data["prompt"]["user"]
 
     # GenerateMarkdown の docstring を動的に設定
     GenerateMarkdown.__doc__ = system_prompt
 
     with open(config, "rb") as f:
-        config = tomllib.load(f)
-    temperature = config["temperature"]
-
-    # OpenRouter の API キーを環境変数から取得
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    if not api_key:
-        typer.echo("エラー: OPENROUTER_API_KEY 環境変数が設定されていません", err=True)
-        raise typer.Exit(1)
+        config_data = tomllib.load(f)
+    temperature = config_data["temperature"]
 
     # DSPy の LiteLLM モデルを設定
     lm = dspy.LM(
