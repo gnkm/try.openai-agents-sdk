@@ -63,7 +63,11 @@
 ```
 
 Example:
-    uv run python src/get_markdown_metadata_with_openai_agents_sdk.py --prompts configs/prompts01.toml --llm 'openrouter/openai/gpt-oss-120b'
+    # OpenAI Agents SDK を使用（デフォルト）
+    uv run python src/get_markdown_metadata.py --prompts configs/prompts01.toml
+
+    # DSPy を使用
+    uv run python src/get_markdown_metadata.py --prompts configs/prompts01.toml --backend dspy
 
 """
 
@@ -75,14 +79,11 @@ from pathlib import Path
 
 import tomllib
 import typer
-from agents import Agent, ModelSettings, Runner
-from agents.extensions.models.litellm_model import LitellmModel
-from rich.console import Console
 
-from models.markdown import MarkdownDocument
+from backends.dspy import run_with_dspy
+from backends.openai_agents_sdk import run_with_openai_agents
 
 app = typer.Typer()
-console = Console()
 
 
 @app.command()
@@ -95,8 +96,12 @@ def main(
         "openrouter/openai/gpt-oss-120b",
         help="LLM モデル名（例: openrouter/openai/gpt-oss-120b）",
     ),
+    backend: str = typer.Option(
+        "openai-agents",
+        help="バックエンド（'dspy' or 'openai-agents'）",
+    ),
 ) -> None:
-    """構造化されたマークダウン文書を生成します（OpenAI Agents SDK版）。"""
+    """構造化されたマークダウン文書を生成します。"""
     # OpenRouter の API キーを環境変数から取得（早期検証）
     api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
@@ -112,33 +117,21 @@ def main(
         config_data = tomllib.load(f)
     temperature = config_data["temperature"]
 
-    asyncio.run(run_async(llm, system_prompt, user_prompt, temperature, api_key))
-
-
-async def run_async(
-    llm: str, system_prompt: str, user_prompt: str, temperature: float, api_key: str
-) -> None:
-    """非同期でエージェントを実行します。"""
-    # LiteLLM モデルを使用してエージェントを作成
-    agent = Agent(
-        name="Markdown Generator",
-        instructions=system_prompt,
-        model=LitellmModel(model=llm, api_key=api_key),
-        model_settings=ModelSettings(temperature=temperature),
-        output_type=MarkdownDocument,
-    )
-
-    # エージェントを実行
-    with console.status("[bold green]LLM 回答中...", spinner="dots") as status:
-        result = await Runner.run(agent, user_prompt)
-        status.update("[bold green]生成完了！")
-
-    # 構造化された出力を取得
-    document = result.final_output_as(MarkdownDocument)
-
-    # JSON 形式で出力（見出しのレベルなどのメタデータを含む）
-    output = document.model_dump_json(indent=2, ensure_ascii=False)
-    typer.echo(output)
+    # バックエンドに応じて処理を分岐
+    if backend == "dspy":
+        run_with_dspy(llm, system_prompt, user_prompt, temperature, api_key)
+    elif backend == "openai-agents":
+        asyncio.run(
+            run_with_openai_agents(
+                llm, system_prompt, user_prompt, temperature, api_key
+            )
+        )
+    else:
+        typer.echo(
+            f"エラー: 不正なバックエンド '{backend}'。'dspy' または 'openai-agents' を指定してください。",
+            err=True,
+        )
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":
