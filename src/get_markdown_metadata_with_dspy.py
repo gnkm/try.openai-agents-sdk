@@ -64,7 +64,7 @@
 ```
 
 Example:
-    uv run python src/get_markdown_metadata_with_dspy.py --prompts-file configs/prompts01.toml --llm 'openrouter/openai/gpt-oss-120b'
+    uv run python src/get_markdown_metadata_with_dspy.py --prompts configs/prompts01.toml --llm 'openrouter/openai/gpt-oss-120b'
 """
 
 from __future__ import annotations
