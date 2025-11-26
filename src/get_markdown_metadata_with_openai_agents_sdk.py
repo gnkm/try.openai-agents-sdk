@@ -63,7 +63,7 @@
 ```
 
 Example:
-    uv run python src/get_markdown_metadata_with_openai_agents_sdk_01.py --prompts configs/prompts01.toml --llm 'openrouter/openai/gpt-oss-120b'
+    uv run python src/get_markdown_metadata_with_openai_agents_sdk.py --prompts configs/prompts01.toml --llm 'openrouter/openai/gpt-oss-120b'
 
 """
 
